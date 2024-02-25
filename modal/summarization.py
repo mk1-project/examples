@@ -16,10 +16,9 @@
 ## This mimics the scenario where you'd want to summarize chunks of documents or articles.
 ##
 ## ## Setup
-## We start by importing the necessary pacakges for this example, such as `datasets`. We will also use a pre-loaded volume with the Llama-2-13B-chat model,
-## to take full advantage of the faster cold starts using Modal's internal filesystem. You can find more information
-## on "Bring-Your-Own-Model" (BYOM) in our [docs](https://docs.mk1.ai/modal/byom.html)
-## which describes how to setup volumes to bootstrap your inference with Flywheel for your own models.
+## To get started with this example, we will use a pre-populated Flyhweel container with the Llama-2-13B-chat model.
+## Alternatively, Flywheel natively supports "Bring-You-Own-Model" ([BYOM](https://docs.mk1.ai/modal/byom.html)),
+## where you can boot up the inference runtime with a model of your choice.
 ##
 ## While the Flywheel inference runtime can readily autoscale on the Modal platform, we will constrain this example to a single GPU instance
 ## with [`concurrency_limit`](https://modal.com/docs/guide/scale#limiting-concurrency).
@@ -31,21 +30,15 @@ from datasets import load_dataset
 
 import modal
 
-
-# Volume with pre-loaded Llama-2-13B-chat model.
-volume = modal.Volume.lookup("models")
-
 # Instance the Flywheel inference runtime and bind the volume containing the model weights.
 Model = modal.Cls.lookup(
-    "mk1-flywheel-latest", "Model", workspace="mk1"
+    "mk1-flywheel-latest-llama2-13b-chat", "Model", workspace="mk1"
 ).with_options(
     gpu=modal.gpu.A100(size="40GB"),
-    volumes={"/models": volume},
     concurrency_limit=1,
 )
 
-model_path = "Llama-2-13b-chat-hf"
-model = Model(model_path=os.path.join("/models", model_path))
+model = Model()
 
 # The container coldstarts at the first request, so we'll send a sample request to warm it up.
 response = model.generate.remote("What is text summarization?", max_tokens=800, eos_token_ids=[1,2], temperature=0.8, top_p=0.95)
