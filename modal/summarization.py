@@ -41,8 +41,14 @@ Model = modal.Cls.lookup(
 model = Model()
 
 # The container coldstarts at the first request, so we'll send a sample request to warm it up.
-response = model.generate.remote("What is text summarization?", max_tokens=800, eos_token_ids=[1,2], temperature=0.8, top_p=0.95)
-print(response['prompt'], response['responses'][0]['text'], "\n\n")
+response = model.generate.remote(
+    "What is text summarization?",
+    max_tokens=800,
+    eos_token_ids=[1, 2],
+    temperature=0.8,
+    top_p=0.95,
+)
+print(response["prompt"], response["responses"][0]["text"], "\n\n")
 
 ## ## Run the Model
 ## In this example, we'll batch process the entire for a list of inputs. You can run this application with `python3 summarization.py`.
@@ -65,12 +71,13 @@ Summarize the following: """
 ## We control the size of the workload with `NUM_PROMPTS`. You can get higher throughput with a larger batch of prompts.
 ## As a reference, 2000 articles may take a little over 6 minutes to process.
 NUM_PROMPTS = 64
-dataset = load_dataset("cnn_dailymail", '1.0.0', split="test")
-articles = list(filter(lambda x: len(x) < 4096, [x for x in dataset['article']]))
+dataset = load_dataset("cnn_dailymail", "1.0.0", split="test")
+articles = list(filter(lambda x: len(x) < 4096, [x for x in dataset["article"]]))
 articles = articles[:NUM_PROMPTS]
 
 prompts = [
-    PROMPT_TEMPLATE.format(system=SUMMARIZATION_SYSTEM_PROMPT, user=text) for text in articles
+    PROMPT_TEMPLATE.format(system=SUMMARIZATION_SYSTEM_PROMPT, user=text)
+    for text in articles
 ]
 
 ## Batch process all the prompts, while accumulating the responses. Note that in this case,
@@ -81,9 +88,16 @@ responses = []
 prompt_tokens = 0
 generated_tokens = 0
 
-for response in tqdm(model.generate.map(prompts, order_outputs=False, kwargs={"max_tokens": 500, "eos_token_ids": [1,2]}), total=len(prompts)):
-    prompt_tokens += response['prompt_tokens']
-    generated_tokens += response['responses'][0]['generated_tokens']
+for response in tqdm(
+    model.generate.map(
+        prompts,
+        order_outputs=False,
+        kwargs={"max_tokens": 500, "eos_token_ids": [1, 2]},
+    ),
+    total=len(prompts),
+):
+    prompt_tokens += response["prompt_tokens"]
+    generated_tokens += response["responses"][0]["generated_tokens"]
     responses.append(response)
 
 ## Lastly, save the responses and print a summary.
@@ -92,7 +106,7 @@ for i, response in enumerate(responses[:8]):
     print(f"\n\n[{i}/{len(responses)}] PROMPT: {response['prompt']}\nRESPONSE: {response['responses'][0]['text']}")
 
 # Save the responses
-with open(f'summarization_results.pkl', 'wb') as file:
+with open(f"summarization_results.pkl", "wb") as file:
     pickle.dump(responses, file)
 
 # Summary

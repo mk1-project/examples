@@ -8,12 +8,38 @@
 ## With Flywheel, you get [unparalleled throughput and latency](https://mk1.ai/blog/flywheel-launch)
 ## for serving asynchronous inference requests (such as real-time chatbots).
 ##
-## ## Message Definition
-## The first step in the building the REST application is to define the input and output messages.abs
+## ## Endpoint Application
+##
+## The first step in the building the REST application is to define the input and output messages.
 ## For this example we'll use `pydantic` to define the input and output types to match the [MK1 Flywheel API](#mk1_api).
+##
+## The next step is to implement the endpoint using FastAPI. We'll run the endpoint on a barebones Debian
+## container, as we only need this container to run the FastAPI application and to forward the generation
+## requests to the MK1 Flywheel container.
+##
+## In this example we're setting the `keep_warm` option to 1, which means that at least container will be kept
+## warm at all times. This is useful for low-latency applications, as it ensures that the container is always
+## ready to serve requests. You can find more information about this topic in the [Modal documentation](https://modal.com/docs/guide/cold-start).
+##
+## The FastAPI application will support the following endpoints:
+##
+## - `/health`: A health check endpoint that returns a 503 status code if there are no runners available, and a
+##   200 status code otherwise.
+## - `/stats`: An endpoint that returns the current stats of the MK1 Flywheel container.
+## - `/generate`: An endpoint that accepts a JSON payload with the generation request and returns the generation
+##   response.
+##
+## This examples uses a [pre-baked](https://docs.mk1.ai/modal/configuration.html#list-of-pre-baked-images) Mistral-7b-instruct model.
+## However, you can modify the example to use a supported model of your choice with [Bring-Your-Own-Model](https://docs.mk1.ai/modal/byom.html) (BYOM),
+## where a volume preloaded with your model (perhaps, fine-tune) is used to setup the `Model` class.
+##
+## The example endpoint can be served with `modal serve endpoint.py`.
+
+import modal
 
 from typing import List
 from pydantic import BaseModel
+
 
 class GenerationRequest(BaseModel):
     text: str
@@ -45,44 +71,17 @@ class GenerationResponse(BaseModel):
     responses: List[GenerationResponseSample]
 
 
-## ## Endpoint Application
-##
-## The next step is to implement the endpoint using FastAPI. We'll run the endpoint on a barebones Debian
-## container, as we only need this container to run the FastAPI application and to forward the generation
-## requests to the MK1 Flywheel container.
-##
-## In this example we're setting the `keep_warm` option to 1, which means that at least container will be kept
-## warm at all times. This is useful for low-latency applications, as it ensures that the container is always
-## ready to serve requests. You can find more information about this topic in the [Modal documentation](https://modal.com/docs/guide/cold-start).
-##
-## The FastAPI application will support the following endpoints:
-##
-## - `/health`: A health check endpoint that returns a 503 status code if there are no runners available, and a
-##   200 status code otherwise.
-## - `/stats`: An endpoint that returns the current stats of the MK1 Flywheel container.
-## - `/generate`: An endpoint that accepts a JSON payload with the generation request and returns the generation
-##   response.
-##
-## This examples uses a [pre-baked](https://docs.mk1.ai/modal/configuration.html#list-of-pre-baked-images) Mistral-7b-instruct model.
-## However, you can modify the example to use a supported model of your choice with [Bring-Your-Own-Model](https://docs.mk1.ai/modal/byom.html) (BYOM),
-## where a volume preloaded with your model (perhaps, fine-tune) is used to setup the `Model` class.
-##
-## The example endpoint can be served with `modal serve endpoint.py`.
-
-import modal
-
 stub = modal.Stub(
     "mk1-endpoint-backend",
     image=modal.Image.debian_slim(),
 )
+
 
 @stub.function(
     keep_warm=1,
     allow_concurrent_inputs=1024,
     timeout=600,
 )
-
-
 @modal.asgi_app(label="mk1-chat-endpoint")
 def app():
     import modal
@@ -94,7 +93,6 @@ def app():
         "mk1-flywheel-latest-mistral-7b-instruct", "Model", workspace="mk1"
     ).with_options(
         gpu=modal.gpu.A10G(),
-        keep_warm=1,
         timeout=600,
     )
     model = Model()
@@ -139,6 +137,7 @@ def app():
         return GenerationResponse(**response)
 
     return web_app
+
 
 ## Finally, we can `curl` to the endpoint to engage with the model. Note, that the first request might take a few seconds
 ## to account for the coldstart, but subsequent calls will be faster.
