@@ -15,6 +15,10 @@
 ## We'll be summarizing news articles from the [`cnn_dailymail`](https://huggingface.co/datasets/cnn_dailymail) dataset from HuggingFace.
 ## This mimics the scenario where you'd want to summarize chunks of documents or articles.
 ##
+## :::{note}
+## The first time you attempt to run an MK1 model you will be prompted by the command line to accept our terms and conditions. This is a one-time process.
+## :::
+##
 ## ## Setup
 ## To get started with this example, we will use a pre-populated Flyhweel container with the Llama-2-13B-chat model.
 ## Alternatively, Flywheel natively supports "Bring-You-Own-Model" ([BYOM](https://docs.mk1.ai/modal/byom.html)),

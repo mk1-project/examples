@@ -8,6 +8,10 @@
 ## With Flywheel, you get [unparalleled throughput and latency](https://mk1.ai/blog/flywheel-launch)
 ## for serving asynchronous inference requests (such as real-time chatbots).
 ##
+## :::{note}
+## The first time you attempt to run an MK1 model you will be prompted by the command line to accept our terms and conditions. This is a one-time process.
+## :::
+##
 ## ## Endpoint Application
 ##
 ## The first step in the building the REST application is to define the input and output messages.
