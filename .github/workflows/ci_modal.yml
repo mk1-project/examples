@@ -1,0 +1,38 @@
+name: Modal Examples Test
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 7 * * *'
+
+jobs:
+  run-and-verify:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Start Program
+      run: |
+        ./your_program &
+        echo $! > program.pid
+
+    - name: Wait for Program to Initialize
+      run: sleep 10
+
+    - name: Verify Program is Running
+      run: |
+        curl http://localhost:8080/your_endpoint
+        echo "Program is up and running"
+      continue-on-error: true
+
+    - name: Shutdown Program
+      run: |
+        kill -SIGINT $(cat program.pid)
+        wait $(cat program.pid)
+        echo "Program has been stopped"
+
+    - name: Report Error if Any Step Failed
+      if: ${{ failure() }}
+      run: |
+        curl -X POST -H "Content-Type: application/json" -d '{"text": "An error occurred in the workflow."}' http://example.com/error-report
