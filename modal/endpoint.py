@@ -83,7 +83,7 @@ stub = modal.Stub(
 
 @stub.function(
     keep_warm=1,
-    allow_concurrent_inputs=1024,
+    allow_concurrent_inputs=1000,
     timeout=600,
 )
 @modal.asgi_app(label="mk1-chat-endpoint")
