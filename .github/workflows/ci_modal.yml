@@ -6,33 +6,62 @@ on:
     - cron: '0 7 * * *'
 
 jobs:
-  run-and-verify:
+  endpoint_example:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: 3.11
+
+    - run: pip install modal
+    - run: modal token set --token-id ${{ secrets.MODAL_TOKEN_ID }} --token-secret ${{ secrets.MODAL_TOKEN_SECRET }}
 
     - name: Start Program
-      run: |
-        ./your_program &
-        echo $! > program.pid
-
-    - name: Wait for Program to Initialize
-      run: sleep 10
+      run: modal serve modal/endpoint.py &
 
     - name: Verify Program is Running
       run: |
-        curl http://localhost:8080/your_endpoint
-        echo "Program is up and running"
+            curl -X "POST" "https://mk1--mk1-chat-endpoint-dev.modal.run/generate" -H 'Content-Type: application/json' -d '{
+                "text": "What is the difference between a llama and an alpaca?",
+                "max_tokens": 512,
+                "eos_token_ids": [1, 2],
+                "temperature": 0.8,
+                "top_k": 50,
+                "top_p": 1.0
+              }'
       continue-on-error: true
 
-    - name: Shutdown Program
-      run: |
-        kill -SIGINT $(cat program.pid)
-        wait $(cat program.pid)
-        echo "Program has been stopped"
-
-    - name: Report Error if Any Step Failed
+    - name: Notify on Failure
       if: ${{ failure() }}
       run: |
-        curl -X POST -H "Content-Type: application/json" -d '{"text": "An error occurred in the workflow."}' http://example.com/error-report
+            curl -X POST -H "Content-Type: application/json" \
+            -d '{"text": "Endpoint example failed. View run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"}' \
+            ${{ secrets.SLACK_URL }}
+
+  summarization_example:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: 3.11
+
+    - run: pip install modal tqdm datasets
+    - run: modal token set --token-id ${{ secrets.MODAL_TOKEN_ID }} --token-secret ${{ secrets.MODAL_TOKEN_SECRET }}
+
+    - name: Start Program
+      run: python3 modal/summarization.py
+
+    - name: Notify on Failure
+      if: ${{ failure() }}
+      run: |
+            curl -X POST -H "Content-Type: application/json" \
+            -d '{"text": "Summarization example failed. View run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"}' \
+            ${{ secrets.SLACK_URL }}
